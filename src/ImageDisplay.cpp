@@ -2,33 +2,7 @@
 typedef unsigned short ushort;
 typedef unsigned char uchar;
 
-void CreateFile(const char *srcfile,const char *dstfile)
-{
-	GDALAllRegister();
-	CPLSetConfigOption("GDAL_FILENAME_IS_UTF8","NO");
-	GDALDataset *pDataset=(GDALDataset *) GDALOpen( srcfile, GA_ReadOnly );
-	int bandNum=pDataset->GetRasterCount();
-	GDALRasterBand *pBand=pDataset->GetRasterBand(1);
-	GDALDataType dataType=pBand->GetRasterDataType();
-
-	GDALDriver *pDriver=GetGDALDriverManager()->GetDriverByName("GTiff");
-	GDALDataset *dstDataset=pDriver->Create(dstfile,800,800,bandNum,dataType,NULL);
-	GDALRasterBand *dstBand;
-	//Ğ´Èë¹âÕ¤Êı¾İ
-	ushort *buf= new ushort[800*800];
-	for (int i=1;i<=bandNum;i++)
-	{
-		pBand=pDataset->GetRasterBand(i);
-		pBand->RasterIO(GF_Read,3388,2204,800,800,buf,800,800,dataType,0,0);
-		dstBand=dstDataset->GetRasterBand(i);
-		dstBand->RasterIO(GF_Write,0,0,800,800,buf,800,800,dataType,0,0);
-	}
-	delete []buf;
-	GDALClose(pDataset);
-	GDALClose(dstDataset);
-}
-
-//Ö±½Ó×î´ó×îĞ¡ÖµÀ­Éì
+//ç›´æ¥æœ€å¤§æœ€å°å€¼æ‹‰ä¼¸
 void MinMaxStretch(ushort *pBuf,uchar * dstBuf,int bufWidth,int bufHeight,double minVal,double maxVal)
 {
 	ushort data;
@@ -46,13 +20,13 @@ void MinMaxStretch(ushort *pBuf,uchar * dstBuf,int bufWidth,int bufHeight,double
 
 
 /** 
-2%-98%×î´ó×îĞ¡ÖµÀ­Éì£¬Ğ¡ÓÚ×îĞ¡ÖµµÄÉèÎª0£¬´óÓÚ×î´óÖµµÄÉèÎª255
-@param pBuf ±£´æ16Î»Ó°ÏñÊı¾İµÄÊı×é£¬¸ÃÊı×éÒ»°ãÖ±½ÓÓÉGdalµÄRasterIOº¯ÊıµÃµ½
-@param dstBuf ±£´æ8Î»Ó°ÏñÊı¾İµÄÊı×é£¬¸ÃÊı×éÒ»°ãÖ±½ÓÓÉGdalµÄRasterIOº¯ÊıµÃµ½ 
-@param width Í¼ÏñµÄÁĞÊı
-@param height Í¼ÏñµÄĞĞÊı
-@param minVal ÓÃÓÚ±£´æ¼ÆËãµÃµ½µÄ×îĞ¡Öµ
-@param maxVal ÓÃÓÚ±£´æ¼ÆËãµÃµ½µÄ×î´óÖµ
+2%-98%æœ€å¤§æœ€å°å€¼æ‹‰ä¼¸ï¼Œå°äºæœ€å°å€¼çš„è®¾ä¸º0ï¼Œå¤§äºæœ€å¤§å€¼çš„è®¾ä¸º255
+@param pBuf ä¿å­˜16ä½å½±åƒæ•°æ®çš„æ•°ç»„ï¼Œè¯¥æ•°ç»„ä¸€èˆ¬ç›´æ¥ç”±Gdalçš„RasterIOå‡½æ•°å¾—åˆ°
+@param dstBuf ä¿å­˜8ä½å½±åƒæ•°æ®çš„æ•°ç»„ï¼Œè¯¥æ•°ç»„ä¸€èˆ¬ç›´æ¥ç”±Gdalçš„RasterIOå‡½æ•°å¾—åˆ° 
+@param width å›¾åƒçš„åˆ—æ•°
+@param height å›¾åƒçš„è¡Œæ•°
+@param minVal ç”¨äºä¿å­˜è®¡ç®—å¾—åˆ°çš„æœ€å°å€¼
+@param maxVal ç”¨äºä¿å­˜è®¡ç®—å¾—åˆ°çš„æœ€å¤§å€¼
 */
 void MinMaxStretchNew(ushort *pBuf,uchar *dstBuf,int bufWidth,int bufHeight,double minVal,double maxVal)
 {
@@ -81,12 +55,12 @@ void MinMaxStretchNew(ushort *pBuf,uchar *dstBuf,int bufWidth,int bufHeight,doub
 }
 
 /** 
-¼ÆËã»Ò¶ÈÀÛ»ıÖ±·½Í¼¸ÅÂÊ·Ö²¼º¯Êı£¬µ±ÀÛ»ı»Ò¶È¸ÅÂÊÎª0.02Ê±È¡×îĞ¡Öµ£¬0.98È¡×î´óÖµ
-@param pBuf ±£´æ16Î»Ó°ÏñÊı¾İµÄÊı×é£¬¸ÃÊı×éÒ»°ãÖ±½ÓÓÉGdalµÄRasterIOº¯ÊıµÃµ½ 
-@param width Í¼ÏñµÄÁĞÊı
-@param height Í¼ÏñµÄĞĞÊı
-@param minVal ÓÃÓÚ±£´æ¼ÆËãµÃµ½µÄ×îĞ¡Öµ
-@param maxVal ÓÃÓÚ±£´æ¼ÆËãµÃµ½µÄ×î´óÖµ
+è®¡ç®—ç°åº¦ç´¯ç§¯ç›´æ–¹å›¾æ¦‚ç‡åˆ†å¸ƒå‡½æ•°ï¼Œå½“ç´¯ç§¯ç°åº¦æ¦‚ç‡ä¸º0.02æ—¶å–æœ€å°å€¼ï¼Œ0.98å–æœ€å¤§å€¼
+@param pBuf ä¿å­˜16ä½å½±åƒæ•°æ®çš„æ•°ç»„ï¼Œè¯¥æ•°ç»„ä¸€èˆ¬ç›´æ¥ç”±Gdalçš„RasterIOå‡½æ•°å¾—åˆ° 
+@param width å›¾åƒçš„åˆ—æ•°
+@param height å›¾åƒçš„è¡Œæ•°
+@param minVal ç”¨äºä¿å­˜è®¡ç®—å¾—åˆ°çš„æœ€å°å€¼
+@param maxVal ç”¨äºä¿å­˜è®¡ç®—å¾—åˆ°çš„æœ€å¤§å€¼
 */
 void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVal,double *maxVal)
 {
@@ -98,7 +72,7 @@ void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVa
 
 	long wMulh = height * width;
 
-	//¼ÆËã»Ò¶È·Ö²¼
+	//è®¡ç®—ç°åº¦åˆ†å¸ƒ
 	for(int x=0;x<width;x++)
 	{
 		for(int y=0;y<height;y++){
@@ -107,7 +81,7 @@ void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVa
 		}
 	}
 
-	//¼ÆËã»Ò¶ÈµÄ¸ÅÂÊ·Ö²¼
+	//è®¡ç®—ç°åº¦çš„æ¦‚ç‡åˆ†å¸ƒ
 	for(int i=0;i<1024;i++)
 	{
 		p[i]=num[i]/wMulh;
@@ -115,9 +89,9 @@ void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVa
 
 	int min=0,max=0;
 	double minProb=0.0,maxProb=0.0;
-	//¼ÆËã»Ò¶ÈÀÛ»ı¸ÅÂÊ
-	//µ±¸ÅÂÊÎª0.02Ê±£¬¸Ã»Ò¶ÈÎª×îĞ¡Öµ
-	//µ±¸ÅÂÊÎª0.98Ê±£¬¸Ã»Ò¶ÈÎª×î´óÖµ
+	//è®¡ç®—ç°åº¦ç´¯ç§¯æ¦‚ç‡
+	//å½“æ¦‚ç‡ä¸º0.02æ—¶ï¼Œè¯¥ç°åº¦ä¸ºæœ€å°å€¼
+	//å½“æ¦‚ç‡ä¸º0.98æ—¶ï¼Œè¯¥ç°åº¦ä¸ºæœ€å¤§å€¼
 	while(min<1024&&minProb<0.02)
 	{
 		minProb+=p[min];
@@ -144,7 +118,7 @@ void Create8BitImage(const char *srcfile,const char *dstfile)
 	GDALDataset *dstDataset=pDriver->Create(dstfile,800,800,3,GDT_Byte,NULL);
 	GDALRasterBand *pBand;
 	GDALRasterBand *dstBand;
-	//Ğ´Èë¹âÕ¤Êı¾İ
+	//å†™å…¥å…‰æ …æ•°æ®
 	ushort *sbuf= new ushort[800*800];
 	uchar *cbuf=new uchar[800*800];
 	for (int i=bandNum,j=1;i>=2;i--,j++)
@@ -172,8 +146,7 @@ void Create8BitImage(const char *srcfile,const char *dstfile)
 
 int main(int argc,char** argv)
 {
-	/*CreateFile("J:\\tiff-mux\\ZY3_MUX_E112.2_N29.9_20131222_L1A0001084660.tiff"
-		,"C:\\Users\\Dell\\Desktop\\assets\\mux16bit.tiff");*/
+
 	Create8BitImage("C:\\Users\\Dell\\Desktop\\assets\\mux16bit.tiff",
 		"C:\\Users\\Dell\\Desktop\\assets\\mux16bit81.tiff");
 }
