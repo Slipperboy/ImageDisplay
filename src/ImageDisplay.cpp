@@ -44,7 +44,16 @@ void MinMaxStretch(ushort *pBuf,uchar * dstBuf,int bufWidth,int bufHeight,double
 	}
 }
 
-//改进的最大最小值拉伸
+
+/** 
+2%-98%最大最小值拉伸，小于最小值的设为0，大于最大值的设为255
+@param pBuf 保存16位影像数据的数组，该数组一般直接由Gdal的RasterIO函数得到
+@param dstBuf 保存8位影像数据的数组，该数组一般直接由Gdal的RasterIO函数得到 
+@param width 图像的列数
+@param height 图像的行数
+@param minVal 用于保存计算得到的最小值
+@param maxVal 用于保存计算得到的最大值
+*/
 void MinMaxStretchNew(ushort *pBuf,uchar *dstBuf,int bufWidth,int bufHeight,double minVal,double maxVal)
 {
 	ushort data;
@@ -71,6 +80,14 @@ void MinMaxStretchNew(ushort *pBuf,uchar *dstBuf,int bufWidth,int bufHeight,doub
 	}
 }
 
+/** 
+计算灰度累积直方图概率分布函数，当累积灰度概率为0.02时取最小值，0.98取最大值
+@param pBuf 保存16位影像数据的数组，该数组一般直接由Gdal的RasterIO函数得到 
+@param width 图像的列数
+@param height 图像的行数
+@param minVal 用于保存计算得到的最小值
+@param maxVal 用于保存计算得到的最大值
+*/
 void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVal,double *maxVal)
 {
 	double p[1024],p1[1024],num[1024];
@@ -81,7 +98,7 @@ void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVa
 
 	long wMulh = height * width;
 
-	//statistics
+	//计算灰度分布
 	for(int x=0;x<width;x++)
 	{
 		for(int y=0;y<height;y++){
@@ -90,7 +107,7 @@ void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVa
 		}
 	}
 
-	//calculate probability
+	//计算灰度的概率分布
 	for(int i=0;i<1024;i++)
 	{
 		p[i]=num[i]/wMulh;
@@ -98,6 +115,9 @@ void HistogramAccumlateMinMax16S(ushort *pBuf,int width,int height,double *minVa
 
 	int min=0,max=0;
 	double minProb=0.0,maxProb=0.0;
+	//计算灰度累积概率
+	//当概率为0.02时，该灰度为最小值
+	//当概率为0.98时，该灰度为最大值
 	while(min<1024&&minProb<0.02)
 	{
 		minProb+=p[min];
@@ -131,16 +151,16 @@ void Create8BitImage(const char *srcfile,const char *dstfile)
 	{
 		pBand=pDataset->GetRasterBand(i);
 		pBand->RasterIO(GF_Read,0,0,800,800,sbuf,800,800,GDT_UInt16,0,0);
-		/*int bGotMin, bGotMax;
+		int bGotMin, bGotMax;
 		double adfMinMax[2];
 		adfMinMax[0] = pBand->GetMinimum( &bGotMin );
 		adfMinMax[1] = pBand->GetMaximum( &bGotMax );
 		if( ! (bGotMin && bGotMax) )
 			GDALComputeRasterMinMax((GDALRasterBandH)pBand, TRUE, adfMinMax);
-		MinMaxStretch(sbuf,cbuf,800,800,adfMinMax[0],adfMinMax[1]);*/
-		double min,max;
+		MinMaxStretch(sbuf,cbuf,800,800,adfMinMax[0],adfMinMax[1]);
+		/*double min,max;
 		HistogramAccumlateMinMax16S(sbuf,800,800,&min,&max);
-		MinMaxStretchNew(sbuf,cbuf,800,800,min,max);
+		MinMaxStretchNew(sbuf,cbuf,800,800,min,max);*/
 		dstBand=dstDataset->GetRasterBand(j);
 		dstBand->RasterIO(GF_Write,0,0,800,800,cbuf,800,800,GDT_Byte,0,0);
 	}
